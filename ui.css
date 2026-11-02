@@ -2,13 +2,14 @@
   --uik-text:#222222;--uik-text2:#5f5f5f;--uik-bg:#ffffff;--uik-bg2:#f4f4f4;--uik-bg3:#e9e9e9;
   --uik-line:#e2e2e2;--uik-line2:#c9c9c9;
   --uik-danger:#a12622;--uik-danger-bg:#fbeaea;--uik-success:#2d6a2f;--uik-success-bg:#eaf3ea;
-  --uik-warn:#b8860b;--uik-warn-text:#222222;--uik-accent:#9e9e9e;
+  --uik-warn:#b8860b;--uik-warn-text:#222222;--uik-accent:#9e9e9e;--uik-primary:#222222;--uik-primary-text:#ffffff;
   --uik-h0:#f2f2f2;--uik-h1:#e0e0e0;--uik-h2:#c8c8c8;--uik-h3:#a8a8a8;
   --uik-ht0:#222222;--uik-ht1:#222222;--uik-ht2:#222222;--uik-ht3:#222222;
   --uik-font:system-ui,sans-serif;
   font-family:var(--uik-font);color:var(--uik-text);font-size:14px;line-height:1.55;text-align:left
 }
 .uik *{box-sizing:border-box}
+.uik :where(*){color:inherit}
 .uik p{margin:0}
 .uik-hide{display:none!important}
 .uik-ok{color:var(--uik-success)}
@@ -52,6 +53,7 @@
 .uik-fold summary::-webkit-details-marker{display:none}
 .uik-fold summary .uik-h{display:inline;margin:0}
 .uik-more{font-size:12px;color:var(--uik-text2);margin-left:6px}
+.uik-fold:not([open]) .uik-less,.uik-fold.uik-two[open] .uik-more:not(.uik-less){display:none}
 .uik-line{display:block;margin-top:4px;font-size:13.5px}
 .uik-items{margin-top:10px}
 .uik-item{display:flex;gap:12px;padding:5px 0;border-top:1px solid var(--uik-line);font-size:13.5px}
@@ -140,7 +142,8 @@
 
 .uik button.uik-btn{margin:8px 6px 0 0;padding:7px 14px;border-radius:8px;border:1px solid var(--uik-line2);background:var(--uik-bg2);color:var(--uik-text);cursor:pointer;font-family:var(--uik-font);font-size:13px;height:auto;white-space:nowrap}
 .uik button.uik-btn:hover{background:var(--uik-bg3)}
-.uik button.uik-btn.uik-main{font-weight:600;border-width:1.5px;box-shadow:inset 0 -2px 0 var(--uik-accent)}
+.uik button.uik-btn.uik-main{font-weight:600;border:1.5px solid var(--uik-primary);background:var(--uik-primary);color:var(--uik-primary-text)}
+.uik button.uik-btn.uik-main:hover{background:var(--uik-primary);opacity:.88}
 .uik button.uik-btn.uik-link{background:transparent;border-color:transparent;color:var(--uik-text2);text-decoration:underline;padding:7px 4px;box-shadow:none}
 .uik button.uik-btn:disabled{opacity:.45;cursor:not-allowed}
 .uik-decide>.uik-warns{margin-top:6px}
@@ -178,3 +181,16 @@
 .uik button.uik-l3,.uik i.uik-l3{background:var(--uik-h3);color:var(--uik-ht3)}
 .uik-leg{font-size:11.5px;color:var(--uik-text2);margin-top:6px;display:flex;gap:4px;align-items:center}
 .uik-leg i{display:inline-block;width:14px;height:10px;border-radius:2px;border:1px solid var(--uik-line)}
+.uik button.uik-btn:is(:hover,:focus,:active){background:var(--uik-bg3)!important;color:var(--uik-text)!important;transform:none!important}
+.uik button.uik-btn.uik-main:is(:hover,:focus,:active){background:var(--uik-primary)!important;color:var(--uik-primary-text)!important;border-color:var(--uik-primary)!important}
+.uik button.uik-btn.uik-link:is(:hover,:focus,:active){background:transparent!important;color:var(--uik-text2)!important}
+.uik button.uik-opt:is(:hover,:focus,:active){background:var(--uik-primary)!important;color:var(--uik-primary-text)!important;border-color:var(--uik-primary)!important;transform:none!important}
+.uik button.uik-opt:is(:hover,:focus,:active) :is(b,span){color:var(--uik-primary-text)!important}
+.uik button.uik-chip:is(:hover,:focus,:active){background:var(--uik-bg2)!important;color:var(--uik-text)!important;transform:none!important}
+.uik button.uik-day:is(:hover,:focus,:active){transform:none!important}
+.uik button.uik-day.uik-l0:is(:hover,:focus,:active){background:var(--uik-h0)!important;color:var(--uik-ht0)!important}
+.uik button.uik-day.uik-l1:is(:hover,:focus,:active){background:var(--uik-h1)!important;color:var(--uik-ht1)!important}
+.uik button.uik-day.uik-l2:is(:hover,:focus,:active){background:var(--uik-h2)!important;color:var(--uik-ht2)!important}
+.uik button.uik-day.uik-l3:is(:hover,:focus,:active){background:var(--uik-h3)!important;color:var(--uik-ht3)!important}
+.uik button.uik-day.uik-off:is(:hover,:focus,:active){background:transparent!important;color:var(--uik-text)!important}
+.uik :is(input,select,textarea).uik-in:is(:hover,:focus,:active){background:var(--uik-bg)!important;color:var(--uik-text)!important}

@@ -1,13 +1,13 @@
 (function (w, d) {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.0.1';
   var SRC = (d.currentScript && d.currentScript.src) || '';
   var RE_JS = /ui(\.min)?\.js(\?.*)?$/;
   var HAS = Object.prototype.hasOwnProperty;
   var TONES = { ok: 1, warning: 1, danger: 1, muted: 1 };
   var TOKENS = { text: 'text', text2: 'text2', bg: 'bg', bg2: 'bg2', bg3: 'bg3', line: 'line', line2: 'line2', danger: 'danger', dangerBg: 'danger-bg',
-    success: 'success', successBg: 'success-bg', warn: 'warn', warnText: 'warn-text', accent: 'accent' };
+    success: 'success', successBg: 'success-bg', warn: 'warn', warnText: 'warn-text', accent: 'accent', primary: 'primary', primaryText: 'primary-text' };
   var TAS = [];
 
   var cssReady = new Promise(function (res) {
@@ -402,11 +402,12 @@
     }));
   };
   B.fold = function (b, P) {
-    var L = P.lab('fold', b), it = b.items || [], ln = b.line;
-    return h('details', { c: 'uik-fold' }, [
+    var L = P.lab('fold', b), it = b.items || [], ln = b.line, ls = b.less != null ? b.less : L.less;
+    return h('details', { c: 'uik-fold' + (ls ? ' uik-two' : ''), open: !!b.open }, [
       h('summary', null, [
         title(P, b.h),
         h('span', { c: 'uik-more', t: P.fill(b.more != null ? b.more : L.more, { n: it.length }) }),
+        ls ? h('span', { c: 'uik-more uik-less', t: P.fill(ls, { n: it.length }) }) : null,
         ln ? h('span', { c: 'uik-line' }, [ln.k ? h('b', { t: s(ln.k) }) : null, (ln.k ? ' ' : '') + s(ln.t)]) : null
       ]),
       h('div', { c: 'uik-items' }, it.map(function (x) {
@@ -479,7 +480,7 @@
       var df = diff(P0, ta.value, L);
       if (df) P.send(P.tpl(b.review, vals({ changes: df })));
     }, 'uik-hide') : null;
-    var bs = b.send ? btn(L.send, function () { P.send(P.tpl(b.send, vals())); }) : null;
+    var bs = b.send ? btn(L.send, function () { P.send(P.tpl(b.send, vals())); }, 'uik-main') : null;
     var bBack = btn(L.back, function () { ta.value = P0; chg(); }, 'uik-link uik-hide');
     function chg() {
       var c = norm(ta.value) !== norm(P0);
