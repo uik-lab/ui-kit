@@ -1,7 +1,7 @@
 (function (w, d) {
   'use strict';
 
-  var VERSION = '1.0.2';
+  var VERSION = '1.0.3';
   var SRC = (d.currentScript && d.currentScript.src) || '';
   var RE_JS = /ui(\.min)?\.js(\?.*)?$/;
   var HAS = Object.prototype.hasOwnProperty;
@@ -450,19 +450,31 @@
   };
 
   B.note = function (b, P, F) {
-    var L = P.lab('note', b), pre = h('pre', { c: 'uik-note' });
-    var cm = b.comment === false ? null : h('input', { c: 'uik-in', type: 'text', maxlength: L.max != null ? s(L.max) : null, placeholder: L.ph || null });
+    var L = P.lab('note', b), pre = h('pre', { c: 'uik-note' }), mw = +L.maxWords || 0;
+    var cm = b.comment === false ? null : h('textarea', { c: 'uik-in uik-cm', rows: '2', maxlength: L.max != null ? s(L.max) : null, placeholder: L.ph || null });
+    var wc = cm && mw && L.words ? h('span') : null;
+    var over = cm && mw && L.over ? h('p', { c: 'uik-err uik-hide', t: P.fill(L.over, { max: mw }) }) : null;
+    function words() { var t = norm(cm ? cm.value : ''); return t ? t.split(' ').length : 0; }
+    function long() { return !!mw && words() > mw; }
     function text() { return noteText(P.parts(b.lines), cm ? cm.value : '', L.prefix, P.strip); }
-    function upd() { pre.textContent = text(); }
-    if (cm) cm.addEventListener('input', upd);
+    function upd() {
+      pre.textContent = text();
+      var x = long();
+      if (wc) { wc.textContent = P.fill(L.words, { n: words(), max: mw }); wc.className = x ? 'uik-danger' : ''; }
+      if (over) over.classList.toggle('uik-hide', !x);
+      if (bt && !b.disabled) bt.disabled = x;
+      if (cm) grow(cm);
+    }
+    if (cm) { cm.addEventListener('input', function () { P.up(); }); area(P, cm); }
     var bt = b.btn ? btn(b.btn.t || L.btn, function () { if (!bt.disabled) P.send(P.tpl(b.btn.send, { note: text() })); }, 'uik-main') : null;
     if (bt && b.disabled) bt.disabled = true;
-    if (F) F.notes.push(text);
+    if (F) { F.notes.push(text); F.long.push(long); }
     P.mid.push(upd);
     var lock = b.lock === false ? null : b.lock || L.lock;
     return h('div', { c: 'uik-notes' }, blks(b.blocks, P, F).concat([
       pre, src(b.src),
       cm && L.comment ? h('label', { c: 'uik-l', t: L.comment }) : null, cm,
+      wc ? h('div', { c: 'uik-hint' }, [h('span'), wc]) : null, over,
       lock ? h('p', { c: 'uik-lock', t: lock }) : null,
       b.disabled ? h('p', { c: 'uik-err', t: s(b.disabled) }) : null,
       bt
@@ -759,7 +771,7 @@
   };
 
   B.form = function (b, P) {
-    var F = { b: b, fields: [], notes: [], warns: null, sub: false };
+    var F = { b: b, fields: [], notes: [], long: [], warns: null, sub: false };
     var inner = h('div', null, blks(b.blocks, P, F));
     if (b.rules && b.rules.length && !F.warns) inner.appendChild(B.warns({}, P, F));
     if (!F.sub) add(inner, B.submit({}, P, F));
@@ -806,8 +818,8 @@
       if (F.done) F.done.classList.remove('uik-hide');
     }, 'uik-link') : null;
     P.end.push(function () {
-      var x = bad(), off = fb.disabled;
-      if (bt) bt.disabled = !!(x || off);
+      var x = bad(), off = fb.disabled, ln = F.long.some(function (f) { return f(); });
+      if (bt) bt.disabled = !!(x || off || ln);
       lk.textContent = off ? s(off) : x ? s(fb.lock) : '';
       lk.classList.toggle('uik-hide', !lk.textContent);
       er.classList.add('uik-hide');

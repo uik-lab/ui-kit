@@ -114,8 +114,9 @@
 .uik label.uik-l{font-size:12px;color:var(--uik-text2);display:block;margin:8px 0 3px}
 .uik-f>label.uik-l:first-child{margin-top:0}
 .uik label.uik-l b{color:var(--uik-danger);font-weight:400}
-.uik input.uik-in,.uik select.uik-in,.uik textarea.uik-in{width:100%;height:auto;min-height:0;font-family:var(--uik-font)!important;font-size:13px;line-height:1.5;padding:7px 8px;border:1px solid var(--uik-line2)!important;border-radius:8px;background:var(--uik-bg)!important;color:var(--uik-text)!important;margin:0;box-shadow:none}
+.uik input.uik-in,.uik select.uik-in,.uik textarea.uik-in{width:100%;height:auto;min-height:0;font-family:var(--uik-font)!important;font-size:13px!important;line-height:1.5!important;padding:7px 8px;border:1px solid var(--uik-line2)!important;border-radius:8px;background:var(--uik-bg)!important;color:var(--uik-text)!important;margin:0;box-shadow:none}
 .uik textarea.uik-in{resize:none;overflow:hidden;display:block}
+.uik :is(input,textarea).uik-in::placeholder{font-size:13px;color:var(--uik-text2);opacity:1}
 .uik .uik-bad{border-color:var(--uik-danger)!important}
 .uik-hint{font-size:12px;color:var(--uik-text2);margin-top:3px;display:flex;justify-content:space-between;gap:12px}
 .uik-ro{font-size:13px;padding:7px 8px;border:1px solid var(--uik-line);border-radius:8px;background:var(--uik-bg2)}
