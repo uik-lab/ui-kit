@@ -1,7 +1,7 @@
 (function (w, d) {
   'use strict';
 
-  var VERSION = '1.0.3';
+  var VERSION = '1.0.4';
   var SRC = (d.currentScript && d.currentScript.src) || '';
   var RE_JS = /ui(\.min)?\.js(\?.*)?$/;
   var HAS = Object.prototype.hasOwnProperty;
@@ -229,6 +229,43 @@
     });
     flush();
     return out.join('\n');
+  }
+  var NBSP = new RegExp(String.fromCharCode(160), 'g');
+  function plain(t) { return s(t).replace(NBSP, ' '); }
+  function lines(x) { return x.split('\n').map(function (l) { return l.replace(/[ \t]+/g, ' ').trim(); }).filter(Boolean).join('\n'); }
+  function mailText(root) {
+    var out = [], cur = null;
+    function tag(n) { return n.nodeType === 1 ? n.tagName.toLowerCase() : ''; }
+    function inl(n) {
+      if (n.nodeType === 3) return plain(n.nodeValue);
+      var t = tag(n);
+      if (!t) return '';
+      if (t === 'br') return '\n';
+      var x = [].map.call(n.childNodes, inl).join('');
+      return /^(p|div|li|ul|ol|h[1-6])$/.test(t) ? '\n' + x + '\n' : x;
+    }
+    function push(x) { x = lines(x); if (x) out.push(x); }
+    function close() { if (cur !== null) { push(cur); cur = null; } }
+    [].forEach.call(root.childNodes, function (n) {
+      var t = tag(n);
+      if (t === 'ol' || t === 'ul') {
+        close();
+        var li = [].filter.call(n.children, function (c) { return tag(c) === 'li'; }).map(function (c) { return lines(inl(c)); }).filter(Boolean);
+        if (t === 'ol') li.forEach(function (x, i) { out.push((i + 1) + '. ' + x); });
+        else if (li.length) out.push(li.map(function (x) { return '- ' + x.split('\n').join(' '); }).join('\n'));
+        return;
+      }
+      if (/^(p|div|h[1-6])$/.test(t)) { close(); push(inl(n)); return; }
+      cur = (cur || '') + inl(n);
+    });
+    close();
+    return out.join('\n\n');
+  }
+  function bkey(b) { return b.split('\n').map(function (l) { return l.trim().replace(RE_UL, '- ').replace(/\s+/g, ' '); }).filter(Boolean).join('\n'); }
+  function keep(orig, now) {
+    var o = {};
+    s(orig).replace(/\r/g, '').split(/\n[ \t]*\n/).forEach(function (b) { b = b.trim(); if (b) o[bkey(b)] = b; });
+    return now.split('\n\n').map(function (b) { var k = bkey(b); return HAS.call(o, k) ? o[k] : b; }).join('\n\n');
   }
 
   function kept(a, b) {
@@ -482,35 +519,52 @@
   };
 
   B.mail = function (b, P) {
-    var L = P.lab('mail', b), P0 = s(b.body);
-    var to = h('input', { c: 'uik-in', type: 'text' }), sj = h('input', { c: 'uik-in', type: 'text' }), ta = h('textarea', { c: 'uik-in', rows: '3' });
-    to.value = s(b.to); sj.value = s(b.subject); ta.value = P0;
-    var ed = h('p', { c: 'uik-edited uik-hide', t: L.edited });
-    var pv = h('div', { c: 'uik-html' });
-    function vals(x) { return Object.assign({ to: to.value, subject: sj.value, body: ta.value }, x); }
+    var L = P.lab('mail', b), P0 = s(b.body), cur = P0;
+    var to = h('input', { c: 'uik-in', type: 'text' }), sj = h('input', { c: 'uik-in', type: 'text' });
+    var ed = h('div', { c: 'uik-html uik-ed', contenteditable: 'true', role: 'textbox', 'aria-multiline': 'true', 'aria-label': s(L.body) || null, spellcheck: 'true' });
+    to.value = s(b.to); sj.value = s(b.subject);
+    var mk = h('p', { c: 'uik-edited uik-hide', t: L.edited });
+    function vals(x) { return Object.assign({ to: to.value, subject: sj.value, body: cur }, x); }
+    function draw(t) { ed.innerHTML = mailHtml(t); }
+    function chg() {
+      var t = mailText(ed), c = norm(mailHtml(t)) !== norm(mailHtml(P0));
+      cur = c ? keep(P0, t) : P0;
+      [br, bBack, mk].forEach(function (x) { if (x) x.classList.toggle('uik-hide', !c); });
+    }
     var br = b.review ? btn(L.review, function () {
-      var df = diff(P0, ta.value, L);
+      chg();
+      var df = diff(P0, cur, L);
       if (df) P.send(P.tpl(b.review, vals({ changes: df })));
     }, 'uik-hide') : null;
-    var bs = b.send ? btn(L.send, function () { P.send(P.tpl(b.send, vals())); }, 'uik-main') : null;
-    var bBack = btn(L.back, function () { ta.value = P0; chg(); }, 'uik-link uik-hide');
-    function chg() {
-      var c = norm(ta.value) !== norm(P0);
-      [br, bBack, ed].forEach(function (x) { if (x) x.classList.toggle('uik-hide', !c); });
-      pv.innerHTML = mailHtml(ta.value);
-      grow(ta);
+    var bs = b.send ? btn(L.send, function () { chg(); P.send(P.tpl(b.send, vals())); }, 'uik-main') : null;
+    var bBack = btn(L.back, function () { draw(P0); chg(); }, 'uik-link uik-hide');
+    function ins(t) {
+      t = plain(t).replace(/\r/g, '');
+      var sl = w.getSelection ? w.getSelection() : null;
+      if (!sl || !sl.rangeCount || !ed.contains(sl.anchorNode)) { draw(mailText(ed) + '\n\n' + t); chg(); return; }
+      var r = sl.getRangeAt(0), fr = d.createDocumentFragment(), last = null;
+      r.deleteContents();
+      t.split('\n').forEach(function (l, i) { if (i) fr.appendChild(h('br')); last = d.createTextNode(l); fr.appendChild(last); });
+      r.insertNode(fr);
+      if (last) { r.setStartAfter(last); r.collapse(true); sl.removeAllRanges(); sl.addRange(r); }
+      chg();
     }
-    ta.addEventListener('input', chg);
-    area(P, ta);
-    pv.innerHTML = mailHtml(P0);
+    ed.addEventListener('input', chg);
+    ed.addEventListener('paste', function (e) { e.preventDefault(); ins(e.clipboardData ? e.clipboardData.getData('text/plain') : ''); });
+    ed.addEventListener('drop', function (e) { e.preventDefault(); });
+    ed.addEventListener('keydown', function (e) {
+      var k = s(e.key).toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k.length === 1 && 'biu'.indexOf(k) >= 0) e.preventDefault();
+    });
+    ed.addEventListener('blur', function () { chg(); draw(cur); });
+    draw(P0);
     var dup = b.dup;
     return h('div', { c: 'uik-mail' }, [
       dup ? h('p', { c: ('uik-warn ' + tone(dup.tone)).trim(), t: s(L.dup) + s(dup.t) }) : null,
       h('label', { c: 'uik-l', t: L.to }), to,
       h('label', { c: 'uik-l', t: L.subject }), sj,
-      h('label', { c: 'uik-l', t: L.body }), ta, ed,
+      h('label', { c: 'uik-l', t: L.body }), ed, mk,
       h('div', null, (b.warns || []).map(function (x) { return h('p', { c: 'uik-warn' }, [mark(P.bul), s(x)]); })),
-      h('details', { c: 'uik-prev' }, [h('summary', { t: L.preview }), pv]),
       br, bs, bBack
     ]);
   };
@@ -644,20 +698,45 @@
     });
   };
   B.pick = function (b, P, F) {
-    var cols = b.cols || [];
-    var rows = (b.rows || []).map(function (r) {
+    var cols = b.cols || [], L = P.lab('form'), rows = [];
+    function chg() { if (b.id) P.chg(b.id); }
+    function cell(c, v, fresh) {
+      if (c.opts) {
+        var e = h('select', { c: 'uik-in' }), os = c.opts.map(opt);
+        if (fresh && c.empty) e.appendChild(h('option', { value: '', t: typeof c.empty === 'string' ? c.empty : s(L.choose) }));
+        if (!fresh && s(v) !== '' && !os.some(function (o) { return o.v === s(v); })) os.unshift({ v: s(v), t: s(v) });
+        os.forEach(function (o) { e.appendChild(h('option', { value: o.v, t: o.t })); });
+        e.value = fresh && c.empty ? '' : s(v);
+        e.addEventListener('change', chg);
+        return { el: e, get: function () { return e.value; } };
+      }
+      if (c.edit || fresh) {
+        var t = h('input', { c: 'uik-in', type: 'text', maxlength: c.max ? s(c.max) : null, placeholder: c.ph || null });
+        t.value = s(v);
+        t.addEventListener('input', chg);
+        return { el: t, get: function () { return t.value.trim(); }, txt: true };
+      }
+      return { el: s(v), get: function () { return v; } };
+    }
+    function addRow(r, fresh) {
       var cb = h('input', { type: 'checkbox' });
-      cb.checked = r.on !== false;
-      cb.addEventListener('change', function () { if (b.id) P.chg(b.id); });
-      return { r: r, cb: cb };
-    });
-    var t = h('table', { c: 'uik-table' }, [h('tr', null, [h('th', { t: s(b.check) })].concat(cols.map(function (c) { return h('th', { t: s(c.t) }); })))]
-      .concat(rows.map(function (x) { return h('tr', null, [h('td', null, x.cb)].concat(cols.map(function (c) { return h('td', { t: s(x.r[c.k]) }); }))); })));
-    return field(b, P, F, [t], {
+      cb.checked = fresh || r.on !== false;
+      cb.addEventListener('change', chg);
+      var cs = cols.map(function (c) { return cell(c, fresh ? c.value : r[c.k], fresh); });
+      rows.push({ r: r, cb: cb, cs: cs, fresh: fresh });
+      return h('tr', null, [h('td', null, cb)].concat(cs.map(function (k, i) { return h('td', null, [k.el, cols[i].sub ? src(s(r[cols[i].sub])) : null]); })));
+    }
+    var t = h('table', { c: 'uik-table uik-pick' }, [h('tr', null, [h('th', { t: s(b.check) })].concat(cols.map(function (c) { return h('th', { t: s(c.t) }); })))]
+      .concat((b.rows || []).map(function (r) { return addRow(r, false); })));
+    var more = b.add ? btn(b.add, function () { t.appendChild(addRow({}, true)); chg(); }, 'uik-link') : null;
+    return field(b, P, F, [t, more], {
       get: function () {
-        return rows.filter(function (x) { return x.cb.checked; }).map(function (x) {
+        return rows.filter(function (x) {
+          return x.cb.checked && (!x.fresh || x.cs.some(function (k) { return k.txt && k.get() !== ''; }));
+        }).map(function (x) {
           var o = {};
           Object.keys(x.r).forEach(function (k) { if (k !== 'on') o[k] = x.r[k]; });
+          cols.forEach(function (c, i) { o[c.k] = x.cs[i].get(); });
           return o;
         });
       }
@@ -854,7 +933,7 @@
     render: render,
     last: null,
     fn: {
-      norm: norm, html: mailHtml, diff: diff,
+      norm: norm, html: mailHtml, diff: diff, text: mailText, keep: keep,
       note: function (lines, comment, prefix, strip) { return noteText(lines, comment, prefix, rx(strip)); },
       fill: function (t, v, L) { return fill(t, local(v), L); },
       test: function (q, v) { return test(q, local(v)); }
